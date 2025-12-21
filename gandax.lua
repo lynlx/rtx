@@ -1,6 +1,6 @@
 --==================================================
 -- GANDAX EVENT SYSTEM
--- v1.0.1 - AUTO TELEPORT + FIXED YAW + DRAG FIX
+-- v1.0.1 - AUTO TELEPORT + FIXED YAW + DRAG FIX final
 --==================================================
 
 local Players = game:GetService("Players")
