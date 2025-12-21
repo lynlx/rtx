@@ -1,152 +1,165 @@
---// GANDAX EVENT SYSTEM v1.0.1
---// Stable Drag + Teleport + Yaw Lock
+--[[ 
+    GANDAX Auto Event System
+    Event: Every 2 hours (even hours) GMT+8
+    Duration: 30 minutes
+    Fixed Event Point
+--]]
 
+local GANDAX_VERSION = "v1.0.0"
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
 
-local player = Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
+-- ================= CONFIG =================
+local EVENT_CFRAME =
+    CFrame.new(721, -475, 8865) *
+    CFrame.Angles(0, math.rad(212), 0)
 
--- =====================
--- CONFIG
--- =====================
-local EVENT_YAW = 212
-local EVENT_POSITION = Vector3.new(0, 0, 0) -- GANTI DENGAN POSISI EVENT
-local EVENT_DURATION = 30 * 60 -- 30 menit
+local EVENT_DURATION = 30 * 60 -- 30 minutes
+local GMT_OFFSET = 8
+-- ==========================================
 
--- =====================
--- STATE
--- =====================
-local AutoEvent = false
-local SavedCFrame = nil
+-- ================= STATE ==================
+local AutoEventEnabled = false
 local EventActive = false
+local LastTriggeredHour = nil
+local LastPosition = nil
+local EventEndTime = nil
+-- ==========================================
 
--- =====================
--- UI
--- =====================
-local gui = Instance.new("ScreenGui")
-gui.Name = "GandaxUI"
-gui.ResetOnSpawn = false
-gui.Parent = player.PlayerGui
+-- ================= UI =====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GANDAX"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
 
--- MAIN FRAME
-local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(300, 150)
-main.Position = UDim2.fromScale(0.5, 0.5)
-main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-main.Active = true
-main.Draggable = true
-main.Parent = gui
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 260, 0, 160)
+Frame.Position = UDim2.new(0, 20, 0.5, -80)
+Frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Frame.BorderSizePixel = 0
 
--- TITLE
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundTransparency = 1
-title.Text = "GANDAX EVENT SYSTEM"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-title.Parent = main
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
 
--- STATUS
-local status = Instance.new("TextLabel")
-status.Position = UDim2.fromOffset(0, 40)
-status.Size = UDim2.new(1, 0, 0, 25)
-status.BackgroundTransparency = 1
-status.Text = "Status: OFF"
-status.TextColor3 = Color3.new(1, 1, 1)
-status.Font = Enum.Font.Gotham
-status.TextSize = 13
-status.Parent = main
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1,0,0,30)
+Title.BackgroundTransparency = 1
+Title.Text = "GANDAX AUTO EVENT "..GANDAX_VERSION
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextColor3 = Color3.new(1,1,1)
 
--- TOGGLE
-local toggle = Instance.new("TextButton")
-toggle.Position = UDim2.fromOffset(50, 80)
-toggle.Size = UDim2.fromOffset(200, 35)
-toggle.Text = "AUTO EVENT : OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-toggle.TextColor3 = Color3.new(1, 1, 1)
-toggle.Font = Enum.Font.GothamBold
-toggle.TextSize = 13
-toggle.Parent = main
+local Toggle = Instance.new("TextButton", Frame)
+Toggle.Position = UDim2.new(0,20,0,40)
+Toggle.Size = UDim2.new(1,-40,0,30)
+Toggle.BackgroundColor3 = Color3.fromRGB(120,40,40)
+Toggle.Text = "AUTO EVENT : OFF"
+Toggle.Font = Enum.Font.GothamBold
+Toggle.TextSize = 13
+Toggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Toggle)
 
--- MINIMIZE
-local minBtn = Instance.new("TextButton")
-minBtn.Size = UDim2.fromOffset(30, 30)
-minBtn.Position = UDim2.new(1, -35, 0, 0)
-minBtn.Text = "-"
-minBtn.Font = Enum.Font.GothamBold
-minBtn.TextSize = 16
-minBtn.Parent = main
+local Status = Instance.new("TextLabel", Frame)
+Status.Position = UDim2.new(0,15,0,80)
+Status.Size = UDim2.new(1,-30,0,60)
+Status.BackgroundTransparency = 1
+Status.TextWrapped = true
+Status.TextYAlignment = Enum.TextYAlignment.Top
+Status.Font = Enum.Font.Code
+Status.TextSize = 12
+Status.TextColor3 = Color3.fromRGB(200,200,200)
+Status.Text = "GANDAX "..GANDAX_VERSION.."\nStatus: Idle\nNext Event: --:--:--"
+-- ==========================================
 
--- ICON (MINIMIZED)
-local icon = Instance.new("TextButton")
-icon.Size = UDim2.fromOffset(45, 45)
-icon.Position = UDim2.fromScale(0.5, 0.5)
-icon.AnchorPoint = Vector2.new(0.5, 0.5)
-icon.Text = "G"
-icon.Visible = false
-icon.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-icon.TextColor3 = Color3.new(1, 1, 1)
-icon.Font = Enum.Font.GothamBold
-icon.TextSize = 20
-icon.Active = true
-icon.Draggable = true
-icon.Parent = gui
-
--- =====================
--- FUNCTIONS
--- =====================
-local function lockYaw(yaw)
-    local pos = hrp.Position
-    hrp.CFrame = CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0)
+-- ================= FUNCTIONS ==============
+local function getHRP()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
 end
 
-local function teleportToEvent()
-    if EventActive then return end
+local function getGMT8()
+    local utc = DateTime.now():ToUniversalTime()
+    local hour = utc.Hour + GMT_OFFSET
+    if hour >= 24 then hour -= 24 end
+    return hour, utc.Minute, utc.Second, utc.UnixTimestamp
+end
+
+local function getNextEventCountdown()
+    local hour, min, sec = getGMT8()
+    local nextHour = hour
+    repeat
+        nextHour = (nextHour + 1) % 24
+    until nextHour % 2 == 0
+
+    local deltaHours = (nextHour - hour) % 24
+    local totalSeconds = deltaHours*3600 - min*60 - sec
+    if totalSeconds < 0 then totalSeconds += 24*3600 end
+
+    local h = math.floor(totalSeconds/3600)
+    local m = math.floor((totalSeconds%3600)/60)
+    local s = totalSeconds%60
+    return string.format("%02d:%02d:%02d", h,m,s)
+end
+
+local function startEvent()
+    local hrp = getHRP()
+    if not hrp then return end
+
+    LastPosition = hrp.CFrame
+    hrp.CFrame = EVENT_CFRAME
+
     EventActive = true
-
-    SavedCFrame = hrp.CFrame
-
-    hrp.CFrame = CFrame.new(EVENT_POSITION)
-    task.wait(0.1)
-    lockYaw(EVENT_YAW)
-
-    status.Text = "Status: EVENT RUNNING"
-
-    task.delay(EVENT_DURATION, function()
-        if SavedCFrame then
-            hrp.CFrame = SavedCFrame
-        end
-        EventActive = false
-        status.Text = "Status: WAITING EVENT"
-    end)
+    EventEndTime = os.time() + EVENT_DURATION
 end
 
--- =====================
--- BUTTON LOGIC
--- =====================
-toggle.MouseButton1Click:Connect(function()
-    AutoEvent = not AutoEvent
-    toggle.Text = AutoEvent and "AUTO EVENT : ON" or "AUTO EVENT : OFF"
-    status.Text = AutoEvent and "Status: WAITING EVENT" or "Status: OFF"
+local function endEvent()
+    local hrp = getHRP()
+    if hrp and LastPosition then
+        hrp.CFrame = LastPosition
+    end
+    EventActive = false
+    EventEndTime = nil
+end
+-- ==========================================
 
-    if AutoEvent then
-        teleportToEvent()
+-- ================= TOGGLE =================
+Toggle.MouseButton1Click:Connect(function()
+    AutoEventEnabled = not AutoEventEnabled
+    if AutoEventEnabled then
+        Toggle.Text = "AUTO EVENT : ON"
+        Toggle.BackgroundColor3 = Color3.fromRGB(40,120,40)
+    else
+        Toggle.Text = "AUTO EVENT : OFF"
+        Toggle.BackgroundColor3 = Color3.fromRGB(120,40,40)
+        if EventActive then
+            endEvent()
+        end
     end
 end)
+-- ==========================================
 
-minBtn.MouseButton1Click:Connect(function()
-    main.Visible = false
-    icon.Visible = true
+-- ================= MAIN LOOP ===============
+RunService.Heartbeat:Connect(function()
+    local hour, min, sec, unix = getGMT8()
+
+    if AutoEventEnabled then
+        if not EventActive and hour % 2 == 0 and LastTriggeredHour ~= hour and min == 0 then
+            LastTriggeredHour = hour
+            startEvent()
+        end
+    end
+
+    if EventActive then
+        local remain = EventEndTime - os.time()
+        if remain <= 0 then
+            endEvent()
+        else
+            local m = math.floor(remain/60)
+            local s = remain%60
+            Status.Text = "Status: EVENT ACTIVE\nEnds in: "..string.format("%02d:%02d", m, s)
+        end
+    else
+        Status.Text = "Status: Idle\nNext Event: "..getNextEventCountdown()
+    end
 end)
-
-icon.MouseButton1Click:Connect(function()
-    icon.Visible = false
-    main.Visible = true
-end)
-
-print("GANDAX EVENT SYSTEM v1.0.1 LOADED")
+-- ==========================================
