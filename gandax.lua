@@ -1,239 +1,152 @@
---==================================================
--- GANDAX EVENT SYSTEM
--- v1.0.1 - AUTO TELEPORT + FIXED YAW + DRAG FIX final
---==================================================
+--// GANDAX EVENT SYSTEM v1.0.1
+--// Stable Drag + Teleport + Yaw Lock
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
 
---==================== CONFIG ======================
-local VERSION = "v1.0.1"
+-- =====================
+-- CONFIG
+-- =====================
+local EVENT_YAW = 212
+local EVENT_POSITION = Vector3.new(0, 0, 0) -- GANTI DENGAN POSISI EVENT
+local EVENT_DURATION = 30 * 60 -- 30 menit
 
-local EVENT_INTERVAL = 2 * 3600
-local EVENT_DURATION = 30 * 60
-local GMT_OFFSET = 8 * 3600
+-- =====================
+-- STATE
+-- =====================
+local AutoEvent = false
+local SavedCFrame = nil
+local EventActive = false
 
-local EVENT_POSITION = Vector3.new(721, -488, 8865)
-local EVENT_YAW = math.rad(212)
-
---==================== STATE =======================
-local autoEvent = false
-local minimized = false
-local inEvent = false
-local savedCFrame = nil
-
---==================== TIME ========================
-local function getTimeGMT8()
-    return os.time(os.date("!*t")) + GMT_OFFSET
-end
-
---==================== TELEPORT ====================
-local function teleportToEvent()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame =
-            CFrame.new(EVENT_POSITION) * CFrame.Angles(0, EVENT_YAW, 0)
-    end
-end
-
-local function teleportBack()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") and savedCFrame then
-        char.HumanoidRootPart.CFrame = savedCFrame
-    end
-end
-
---==================== UI ==========================
+-- =====================
+-- UI
+-- =====================
 local gui = Instance.new("ScreenGui")
-gui.Name = "GANDAX_EVENT_SYSTEM"
-gui.Parent = game.CoreGui
+gui.Name = "GandaxUI"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(320, 230)
-frame.Position = UDim2.fromScale(0.05, 0.25)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.BorderSizePixel = 0
-frame.Active = true
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
+-- MAIN FRAME
+local main = Instance.new("Frame")
+main.Size = UDim2.fromOffset(300, 150)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+main.Active = true
+main.Draggable = true
+main.Parent = gui
 
--- HEADER (INI YANG BISA DI-DRAG)
-local header = Instance.new("Frame", frame)
-header.Size = UDim2.fromOffset(320, 40)
-header.BackgroundColor3 = Color3.fromRGB(35,35,35)
-header.BorderSizePixel = 0
-header.Active = true
+-- TITLE
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "GANDAX EVENT SYSTEM"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.Parent = main
 
-local titleBtn = Instance.new("TextButton", header)
-titleBtn.Size = UDim2.fromScale(1,1)
-titleBtn.Text = "GANDAX EVENT SYSTEM"
-titleBtn.Font = Enum.Font.GothamBold
-titleBtn.TextSize = 14
-titleBtn.TextColor3 = Color3.new(1,1,1)
-titleBtn.BackgroundTransparency = 1
-titleBtn.AutoButtonColor = false
+-- STATUS
+local status = Instance.new("TextLabel")
+status.Position = UDim2.fromOffset(0, 40)
+status.Size = UDim2.new(1, 0, 0, 25)
+status.BackgroundTransparency = 1
+status.Text = "Status: OFF"
+status.TextColor3 = Color3.new(1, 1, 1)
+status.Font = Enum.Font.Gotham
+status.TextSize = 13
+status.Parent = main
 
-local minimizeBtn = Instance.new("TextButton", header)
-minimizeBtn.Size = UDim2.fromOffset(30,30)
-minimizeBtn.Position = UDim2.fromOffset(285,5)
-minimizeBtn.Text = "-"
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 18
-minimizeBtn.TextColor3 = Color3.new(1,1,1)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0,6)
+-- TOGGLE
+local toggle = Instance.new("TextButton")
+toggle.Position = UDim2.fromOffset(50, 80)
+toggle.Size = UDim2.fromOffset(200, 35)
+toggle.Text = "AUTO EVENT : OFF"
+toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggle.TextColor3 = Color3.new(1, 1, 1)
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 13
+toggle.Parent = main
 
--- CONTENT
-local content = Instance.new("Frame", frame)
-content.Position = UDim2.fromOffset(0,40)
-content.Size = UDim2.fromOffset(320,190)
-content.BackgroundTransparency = 1
+-- MINIMIZE
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.fromOffset(30, 30)
+minBtn.Position = UDim2.new(1, -35, 0, 0)
+minBtn.Text = "-"
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 16
+minBtn.Parent = main
 
-local versionLabel = Instance.new("TextLabel", content)
-versionLabel.Size = UDim2.fromOffset(320,20)
-versionLabel.Text = VERSION
-versionLabel.Font = Enum.Font.Gotham
-versionLabel.TextSize = 11
-versionLabel.TextColor3 = Color3.fromRGB(180,180,180)
-versionLabel.BackgroundTransparency = 1
+-- ICON (MINIMIZED)
+local icon = Instance.new("TextButton")
+icon.Size = UDim2.fromOffset(45, 45)
+icon.Position = UDim2.fromScale(0.5, 0.5)
+icon.AnchorPoint = Vector2.new(0.5, 0.5)
+icon.Text = "G"
+icon.Visible = false
+icon.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+icon.TextColor3 = Color3.new(1, 1, 1)
+icon.Font = Enum.Font.GothamBold
+icon.TextSize = 20
+icon.Active = true
+icon.Draggable = true
+icon.Parent = gui
 
-local statusLabel = Instance.new("TextLabel", content)
-statusLabel.Position = UDim2.fromOffset(10,25)
-statusLabel.Size = UDim2.fromOffset(300,25)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.TextColor3 = Color3.new(1,1,1)
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 12
-statusLabel.BackgroundTransparency = 1
+-- =====================
+-- FUNCTIONS
+-- =====================
+local function lockYaw(yaw)
+    local pos = hrp.Position
+    hrp.CFrame = CFrame.new(pos) * CFrame.Angles(0, math.rad(yaw), 0)
+end
 
-local timerLabel = Instance.new("TextLabel", content)
-timerLabel.Position = UDim2.fromOffset(10,55)
-timerLabel.Size = UDim2.fromOffset(300,35)
-timerLabel.TextXAlignment = Enum.TextXAlignment.Left
-timerLabel.TextColor3 = Color3.fromRGB(0,255,150)
-timerLabel.Font = Enum.Font.GothamBold
-timerLabel.TextSize = 16
-timerLabel.BackgroundTransparency = 1
+local function teleportToEvent()
+    if EventActive then return end
+    EventActive = true
 
-local toggleBtn = Instance.new("TextButton", content)
-toggleBtn.Position = UDim2.fromOffset(10,105)
-toggleBtn.Size = UDim2.fromOffset(300,35)
-toggleBtn.Text = "Auto Event : OFF"
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 14
-toggleBtn.TextColor3 = Color3.new(1,1,1)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,6)
+    SavedCFrame = hrp.CFrame
 
-toggleBtn.MouseButton1Click:Connect(function()
-    autoEvent = not autoEvent
-    toggleBtn.Text = autoEvent and "Auto Event : ON" or "Auto Event : OFF"
-end)
+    hrp.CFrame = CFrame.new(EVENT_POSITION)
+    task.wait(0.1)
+    lockYaw(EVENT_YAW)
 
---==================== DRAG FIX (HEADER ONLY) ======
-do
-    local dragging = false
-    local dragStart, startPos
+    status.Text = "Status: EVENT RUNNING"
 
-    header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
+    task.delay(EVENT_DURATION, function()
+        if SavedCFrame then
+            hrp.CFrame = SavedCFrame
         end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
+        EventActive = false
+        status.Text = "Status: WAITING EVENT"
     end)
 end
 
---==================== MINIMIZE ====================
-local function setMinimized(state)
-    minimized = state
-    if minimized then
-        content.Visible = false
-        frame.Size = UDim2.fromOffset(50,50)
-        header.Size = UDim2.fromOffset(50,50)
-        titleBtn.Text = "G"
-        titleBtn.TextSize = 20
-        minimizeBtn.Visible = false
-    else
-        content.Visible = true
-        frame.Size = UDim2.fromOffset(320,230)
-        header.Size = UDim2.fromOffset(320,40)
-        titleBtn.Text = "GANDAX EVENT SYSTEM"
-        titleBtn.TextSize = 14
-        minimizeBtn.Visible = true
-    end
-end
+-- =====================
+-- BUTTON LOGIC
+-- =====================
+toggle.MouseButton1Click:Connect(function()
+    AutoEvent = not AutoEvent
+    toggle.Text = AutoEvent and "AUTO EVENT : ON" or "AUTO EVENT : OFF"
+    status.Text = AutoEvent and "Status: WAITING EVENT" or "Status: OFF"
 
-minimizeBtn.MouseButton1Click:Connect(function()
-    setMinimized(true)
-end)
-
-titleBtn.MouseButton1Click:Connect(function()
-    if minimized then
-        setMinimized(false)
+    if AutoEvent then
+        teleportToEvent()
     end
 end)
 
---==================== MAIN LOOP ===================
-RunService.Heartbeat:Connect(function()
-    if not autoEvent then
-        statusLabel.Text = "Status: Auto Event OFF"
-        timerLabel.Text = "--"
-        return
-    end
-
-    local now = getTimeGMT8()
-    local progress = now % EVENT_INTERVAL
-
-    if progress < EVENT_DURATION then
-        local left = EVENT_DURATION - progress
-        statusLabel.Text = "Status: EVENT ACTIVE"
-        timerLabel.Text = string.format(
-            "Ends In: %02d:%02d:%02d",
-            left//3600, (left%3600)//60, left%60
-        )
-
-        if not inEvent then
-            inEvent = true
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                savedCFrame = char.HumanoidRootPart.CFrame
-                teleportToEvent()
-            end
-        end
-    else
-        local nextEvent = EVENT_INTERVAL - progress
-        statusLabel.Text = "Status: Waiting Event"
-        timerLabel.Text = string.format(
-            "Next Event In: %02d:%02d:%02d",
-            nextEvent//3600, (nextEvent%3600)//60, nextEvent%60
-        )
-
-        if inEvent then
-            inEvent = false
-            teleportBack()
-            savedCFrame = nil
-        end
-    end
+minBtn.MouseButton1Click:Connect(function()
+    main.Visible = false
+    icon.Visible = true
 end)
+
+icon.MouseButton1Click:Connect(function()
+    icon.Visible = false
+    main.Visible = true
+end)
+
+print("GANDAX EVENT SYSTEM v1.0.1 LOADED")
