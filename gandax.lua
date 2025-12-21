@@ -1,15 +1,18 @@
 --=====================================
 -- GANDAX EVENT SYSTEM
--- STEP 1 - COUNTDOWN ONLY (FIXED)
+-- STEP 2 - Toggle + Countdown
 --=====================================
 
 local RunService = game:GetService("RunService")
 
 -- CONFIG
-local VERSION = "v1.0.0-step1"
+local VERSION = "v1.0.1-step2"
 local EVENT_INTERVAL = 2 * 3600
 local EVENT_DURATION = 30 * 60
 local GMT_OFFSET = 8 * 3600
+
+-- STATE
+local autoEvent = false
 
 -- TIME
 local function getTimeGMT8()
@@ -18,22 +21,20 @@ end
 
 -- UI
 local gui = Instance.new("ScreenGui")
-gui.Name = "GANDAX_STEP1"
+gui.Name = "GANDAX_STEP2"
 gui.Parent = game.CoreGui
 
 local frame = Instance.new("Frame")
 frame.Parent = gui
-frame.Size = UDim2.fromOffset(320, 160)
+frame.Size = UDim2.fromOffset(320, 200)
 frame.Position = UDim2.fromScale(0.05, 0.25)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.BorderSizePixel = 0
 frame.Active = true
-
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
 -- TITLE
-local title = Instance.new("TextLabel")
-title.Parent = frame
+local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.fromOffset(320, 40)
 title.Text = "GANDAX EVENT SYSTEM"
 title.TextColor3 = Color3.new(1,1,1)
@@ -43,8 +44,7 @@ title.BackgroundColor3 = Color3.fromRGB(35,35,35)
 title.BorderSizePixel = 0
 
 -- VERSION
-local versionLabel = Instance.new("TextLabel")
-versionLabel.Parent = frame
+local versionLabel = Instance.new("TextLabel", frame)
 versionLabel.Position = UDim2.fromOffset(0, 40)
 versionLabel.Size = UDim2.fromOffset(320, 20)
 versionLabel.Text = VERSION
@@ -54,9 +54,8 @@ versionLabel.TextSize = 11
 versionLabel.BackgroundTransparency = 1
 
 -- STATUS
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Parent = frame
-statusLabel.Position = UDim2.fromOffset(10, 70)
+local statusLabel = Instance.new("TextLabel", frame)
+statusLabel.Position = UDim2.fromOffset(10, 65)
 statusLabel.Size = UDim2.fromOffset(300, 25)
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.TextColor3 = Color3.new(1,1,1)
@@ -65,20 +64,42 @@ statusLabel.TextSize = 12
 statusLabel.BackgroundTransparency = 1
 
 -- TIMER
-local timerLabel = Instance.new("TextLabel")
-timerLabel.Parent = frame
-timerLabel.Position = UDim2.fromOffset(10, 100)
-timerLabel.Size = UDim2.fromOffset(300, 40)
+local timerLabel = Instance.new("TextLabel", frame)
+timerLabel.Position = UDim2.fromOffset(10, 95)
+timerLabel.Size = UDim2.fromOffset(300, 35)
 timerLabel.TextXAlignment = Enum.TextXAlignment.Left
 timerLabel.TextColor3 = Color3.fromRGB(0,255,150)
 timerLabel.Font = Enum.Font.GothamBold
 timerLabel.TextSize = 16
 timerLabel.BackgroundTransparency = 1
 
+-- TOGGLE BUTTON
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Position = UDim2.fromOffset(10, 140)
+toggleBtn.Size = UDim2.fromOffset(300, 35)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Text = "Auto Event : OFF"
+
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    autoEvent = not autoEvent
+    toggleBtn.Text = autoEvent and "Auto Event : ON" or "Auto Event : OFF"
+end)
+
 -- LOOP
 RunService.Heartbeat:Connect(function()
     local now = getTimeGMT8()
     local progress = now % EVENT_INTERVAL
+
+    if not autoEvent then
+        statusLabel.Text = "Status: Auto Event OFF"
+        timerLabel.Text = "--"
+        return
+    end
 
     if progress < EVENT_DURATION then
         local left = EVENT_DURATION - progress
