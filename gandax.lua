@@ -1,6 +1,6 @@
 --==================================================
 -- GANDAX EVENT SYSTEM
--- v1.0.1 - AUTO TELEPORT + FIXED YAW
+-- v1.0.1 - AUTO TELEPORT + FIXED YAW + DRAG FIX
 --==================================================
 
 local Players = game:GetService("Players")
@@ -12,14 +12,12 @@ local player = Players.LocalPlayer
 --==================== CONFIG ======================
 local VERSION = "v1.0.1"
 
--- TIME
-local EVENT_INTERVAL = 2 * 3600       -- 2 jam
-local EVENT_DURATION = 30 * 60        -- 30 menit
-local GMT_OFFSET = 8 * 3600           -- GMT+8
+local EVENT_INTERVAL = 2 * 3600
+local EVENT_DURATION = 30 * 60
+local GMT_OFFSET = 8 * 3600
 
--- EVENT POINT (FIX)
 local EVENT_POSITION = Vector3.new(721, -488, 8865)
-local EVENT_YAW = math.rad(212)       -- WAJIB & TERKUNCI
+local EVENT_YAW = math.rad(212)
 
 --==================== STATE =======================
 local autoEvent = false
@@ -27,7 +25,7 @@ local minimized = false
 local inEvent = false
 local savedCFrame = nil
 
---==================== TIME FUNC ===================
+--==================== TIME ========================
 local function getTimeGMT8()
     return os.time(os.date("!*t")) + GMT_OFFSET
 end
@@ -49,8 +47,9 @@ local function teleportBack()
 end
 
 --==================== UI ==========================
-local gui = Instance.new("ScreenGui", game.CoreGui)
+local gui = Instance.new("ScreenGui")
 gui.Name = "GANDAX_EVENT_SYSTEM"
+gui.Parent = game.CoreGui
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(320, 230)
@@ -60,11 +59,12 @@ frame.BorderSizePixel = 0
 frame.Active = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
 
--- HEADER
+-- HEADER (INI YANG BISA DI-DRAG)
 local header = Instance.new("Frame", frame)
 header.Size = UDim2.fromOffset(320, 40)
 header.BackgroundColor3 = Color3.fromRGB(35,35,35)
 header.BorderSizePixel = 0
+header.Active = true
 
 local titleBtn = Instance.new("TextButton", header)
 titleBtn.Size = UDim2.fromScale(1,1)
@@ -132,30 +132,34 @@ toggleBtn.MouseButton1Click:Connect(function()
     toggleBtn.Text = autoEvent and "Auto Event : ON" or "Auto Event : OFF"
 end)
 
---==================== DRAG (PC + MOBILE) ==========
+--==================== DRAG FIX (HEADER ONLY) ======
 do
-    local dragging, dragStart, startPos
-    frame.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
+    local dragging = false
+    local dragStart, startPos
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            dragStart = i.Position
+            dragStart = input.Position
             startPos = frame.Position
         end
     end)
-    UIS.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement
-        or i.UserInputType == Enum.UserInputType.Touch) then
-            local delta = i.Position - dragStart
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
             frame.Position = UDim2.new(
                 startPos.X.Scale, startPos.X.Offset + delta.X,
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
-    UIS.InputEnded:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
     end)
@@ -203,7 +207,6 @@ RunService.Heartbeat:Connect(function()
     local progress = now % EVENT_INTERVAL
 
     if progress < EVENT_DURATION then
-        -- EVENT ACTIVE
         local left = EVENT_DURATION - progress
         statusLabel.Text = "Status: EVENT ACTIVE"
         timerLabel.Text = string.format(
@@ -215,12 +218,11 @@ RunService.Heartbeat:Connect(function()
             inEvent = true
             local char = player.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                savedCFrame = char.HumanoidRootPart.CFrame -- SIMPAN POSISI + ARAH
+                savedCFrame = char.HumanoidRootPart.CFrame
                 teleportToEvent()
             end
         end
     else
-        -- WAITING
         local nextEvent = EVENT_INTERVAL - progress
         statusLabel.Text = "Status: Waiting Event"
         timerLabel.Text = string.format(
