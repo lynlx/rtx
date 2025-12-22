@@ -1,13 +1,11 @@
 --[[ 
     GANDAX Weather & Time Control
-    Features: Weather cleanup, time slider, minimize, draggable UI, keyboard shortcuts
-    Version: 3.1
+    Features: Weather cleanup, time slider, minimize, draggable UI
+    Fixed: Minimize button, UI structure, slider functionality
 --]]
 
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ================= STATE ==================
@@ -16,7 +14,7 @@ local UIMinimized = false
 
 -- ================= UI =====================
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GANDAX_FINAL_V31"
+ScreenGui.Name = "GANDAX_FINAL"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -46,7 +44,7 @@ Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Position = UDim2.new(0, 15, 0, 0)
 
--- Minimize Button
+-- Minimize Button (FIXED - seperti v1.2.0)
 local MinimizeButton = Instance.new("TextButton", TitleBar)
 MinimizeButton.Size = UDim2.new(0, 30, 0, 20)
 MinimizeButton.Position = UDim2.new(1, -40, 0, 7)
@@ -107,7 +105,7 @@ local SliderBackground = Instance.new("Frame", Content)
 SliderBackground.Position = UDim2.new(0, 15, 0, 85)
 SliderBackground.Size = UDim2.new(1, -30, 0, 20)
 SliderBackground.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-SliderBackground.Active = false
+SliderBackground.Active = false  -- Nonaktifkan agar tidak menangkap drag
 SliderBackground.Selectable = false
 Instance.new("UICorner", SliderBackground).CornerRadius = UDim.new(0, 5)
 
@@ -118,13 +116,13 @@ SliderTrack.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
 Instance.new("UICorner", SliderTrack).CornerRadius = UDim.new(0, 5)
 
 -- Time Slider Thumb (bisa digeser)
-local SliderThumb = Instance.new("TextButton", SliderBackground)
+local SliderThumb = Instance.new("TextButton", SliderBackground)  -- Pakai TextButton agar bisa di-click
 SliderThumb.Size = UDim2.new(0, 15, 0, 25)
 SliderThumb.Position = UDim2.new(0.5, -7.5, 0, -2.5)
 SliderThumb.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
 SliderThumb.BorderSizePixel = 0
-SliderThumb.Text = ""
-SliderThumb.AutoButtonColor = false
+SliderThumb.Text = ""  -- Kosongkan text
+SliderThumb.AutoButtonColor = false  -- Nonaktifkan auto color
 Instance.new("UICorner", SliderThumb).CornerRadius = UDim.new(0, 3)
 
 -- Time Display
@@ -190,7 +188,7 @@ local function connectButton(button, callback)
     button.MouseButton1Click:Connect(callback)
 end
 
--- Function untuk toggle minimize
+-- Function untuk toggle minimize (SAMA PERSIS seperti v1.2.0)
 local function toggleMinimize()
     UIMinimized = not UIMinimized
     
@@ -293,7 +291,10 @@ end
 
 -- Function untuk setup slider dragging
 local function setupSlider()
+    local UserInputService = game:GetService("UserInputService")
     local isDragging = false
+    local dragStart = nil
+    local startPos = nil
     
     -- Function untuk update slider position
     local function updateSliderPosition(xPosition)
@@ -345,6 +346,7 @@ end
 
 -- Function untuk make title bar draggable
 local function makeTitleBarDraggable()
+    local UserInputService = game:GetService("UserInputService")
     local dragging
     local dragInput
     local dragStart
@@ -385,28 +387,14 @@ local function makeTitleBarDraggable()
         end
     end)
 end
-
--- Function untuk keyboard shortcuts
-local function setupKeyboardShortcuts()
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        -- Skip jika input diproses oleh game (misal: chat)
-        if gameProcessed then return end
-        
-        -- Shortcut: Numpad . (Decimal) atau Del untuk minimize/maximize
-        if input.KeyCode == Enum.KeyCode.NumPadDecimal or 
-           input.KeyCode == Enum.KeyCode.Delete then
-            toggleMinimize()
-        end
-    end)
-end
 -- ==========================================
 
 -- ================= EVENT CONNECTIONS =================
--- Minimize Button
-connectButton(MinimizeButton, toggleMinimize)
+-- Minimize Button (FIXED - langsung panggil fungsi)
+MinimizeButton.Activated:Connect(toggleMinimize)
 
 -- GX Logo untuk restore
-connectButton(GXLogo, function()
+GXLogo.MouseButton1Click:Connect(function()
     if UIMinimized then
         toggleMinimize()
     end
@@ -450,21 +438,13 @@ makeTitleBarDraggable()
 -- Setup slider
 setupSlider()
 
--- Setup keyboard shortcuts
-setupKeyboardShortcuts()
-
 -- Set initial time to 12:00 (Day)
 updateTimeFromSlider(0.5)
 
-print("GANDAX Weather & Time Control v3.1 Loaded!")
-print("========================================")
-print("FEATURES:")
-print("1. Drag title bar to move window")
-print("2. Click '-' to minimize / Click GX logo to restore")
-print("3. Drag time slider or click on slider track")
-print("4. Click buttons to remove weather effects")
-print("5. Keyboard Shortcuts:")
-print("   - Numpad . (Decimal) = Toggle minimize")
-print("   - Delete key = Toggle minimize")
-print("========================================")
+print("GANDAX Weather & Time Control v3.0 Loaded!")
+print("FIXED ISSUES:")
+print("1. Minimize button now works")
+print("2. UI stays together (no separation)")
+print("3. Slider can be dragged without moving UI")
+print("4. Only title bar is draggable")
 -- ==========================================
