@@ -10,7 +10,6 @@ local GANDAX_VERSION = "v1.2.0"
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
 
 -- ================= CONFIG =================
 local EVENT_CFRAME =
@@ -29,9 +28,6 @@ local LastTriggeredHour = nil
 local LastPosition = nil
 local EventEndTime = nil
 local UIMinimized = false
-local Dragging = false
-local DragStart = nil
-local StartPosition = nil
 -- ==========================================
 
 -- ================= UI =====================
@@ -47,6 +43,7 @@ Frame.Position = UDim2.new(0, 20, 0.5, -90)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 Frame.Active = true
+Frame.Draggable = true
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
 
 -- Title Bar
@@ -56,8 +53,9 @@ TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 TitleBar.BorderSizePixel = 0
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 10)
 
--- Make only title bar draggable for main UI
+-- Make only title bar draggable
 TitleBar.Active = true
+TitleBar.Draggable = true
 
 local Title = Instance.new("TextLabel", TitleBar)
 Title.Size = UDim2.new(0.7, 0, 1, 0)
@@ -91,6 +89,7 @@ GXLogo.TextSize = 20
 GXLogo.TextColor3 = Color3.new(1, 1, 1)
 GXLogo.Visible = false
 GXLogo.Active = true
+GXLogo.Draggable = true
 Instance.new("UICorner", GXLogo).CornerRadius = UDim.new(0, 10)
 
 -- GX Logo Decoration
@@ -134,49 +133,6 @@ Status.Font = Enum.Font.Code
 Status.TextSize = 12
 Status.TextColor3 = Color3.fromRGB(200, 200, 200)
 Status.Text = "GANDAX " .. GANDAX_VERSION .. "\nDuration: 29:55\nStatus: Idle\nNext Event: --:--:--"
--- ==========================================
-
--- ================= DRAG FUNCTIONS ==============
-local function makeDraggable(frame, dragPart)
-    local dragging = false
-    local dragInput, dragStart, startPos
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, 
-                                   startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    
-    dragPart.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    dragPart.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-end
-
--- Apply draggable functionality
-makeDraggable(Frame, TitleBar)
-makeDraggable(GXLogo, GXLogo)
 -- ==========================================
 
 -- ================= FUNCTIONS ==============
@@ -294,6 +250,12 @@ Toggle.MouseButton1Click:Connect(function()
 end)
 
 MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
+
+GXLogo.MouseButton1Click:Connect(function()
+    if UIMinimized then
+        toggleMinimize()
+    end
+end)
 
 -- Double click GX logo to restore
 local lastClickTime = 0
