@@ -4,14 +4,16 @@
     Duration: 29 menit 55 detik (selesai 5 detik sebelum jam)
     Fixed Event Point
     Features: Draggable UI, Minimize with GX logo
+    Added: Anti-AFK, Click Teleport, Status Display, Color-coded buttons
 --]]
 
-local GANDAX_VERSION = "v1.3.0"
+local GANDAX_VERSION = "v1.4.1"
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
 -- ================= CONFIG =================
 local EVENT_CFRAME =
@@ -33,6 +35,8 @@ local UIMinimized = false
 local IsDraggingUI = false
 local IsDraggingLogo = false
 local LastLogoPosition = nil
+local AntiAFKEnabled = false
+local ClickTPEnabled = false
 -- ==========================================
 
 -- ================= UI =====================
@@ -44,8 +48,8 @@ ScreenGui.Parent = game.CoreGui
 
 -- Main Frame
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 280, 0, 180)
-Frame.Position = UDim2.new(0, 20, 0.5, -90)
+Frame.Size = UDim2.new(0, 320, 0, 250) -- Diperbesar untuk fitur baru
+Frame.Position = UDim2.new(0, 20, 0.5, -125)
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 Frame.Active = true
@@ -92,10 +96,12 @@ Content.Position = UDim2.new(0, 0, 0, 30)
 Content.BackgroundTransparency = 1
 Content.ZIndex = 2
 
+-- ================= COLOR-CODED BUTTONS ==================
+-- Auto Event Toggle Button (Warna MERAH/OFF - HIJAU/ON)
 local Toggle = Instance.new("TextButton", Content)
-Toggle.Position = UDim2.new(0, 20, 0, 10)
-Toggle.Size = UDim2.new(1, -40, 0, 30)
-Toggle.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+Toggle.Position = UDim2.new(0, 15, 0, 10)
+Toggle.Size = UDim2.new(1, -30, 0, 35)
+Toggle.BackgroundColor3 = Color3.fromRGB(180, 60, 60) -- Merah untuk OFF
 Toggle.Text = "AUTO EVENT : OFF"
 Toggle.Font = Enum.Font.GothamBold
 Toggle.TextSize = 13
@@ -104,17 +110,56 @@ Toggle.ZIndex = 2
 Toggle.AutoButtonColor = true
 Instance.new("UICorner", Toggle)
 
+-- Status Display (Text log untuk feedback aksi)
 local Status = Instance.new("TextLabel", Content)
-Status.Position = UDim2.new(0, 15, 0, 50)
-Status.Size = UDim2.new(1, -30, 1, -60)
+Status.Position = UDim2.new(0, 15, 0, 55)
+Status.Size = UDim2.new(1, -30, 0, 70)
 Status.BackgroundTransparency = 1
 Status.TextWrapped = true
 Status.TextYAlignment = Enum.TextYAlignment.Top
 Status.Font = Enum.Font.Code
-Status.TextSize = 12
+Status.TextSize = 11
 Status.TextColor3 = Color3.fromRGB(200, 200, 200)
 Status.Text = "GANDAX " .. GANDAX_VERSION .. "\nDuration: 29:55\nStatus: Idle\nNext Event: --:--:--"
 Status.ZIndex = 2
+
+-- Click Teleport Button (Warna HIJAU)
+local ClickTPButton = Instance.new("TextButton", Content)
+ClickTPButton.Position = UDim2.new(0, 15, 0, 135)
+ClickTPButton.Size = UDim2.new(0.45, 0, 0, 30)
+ClickTPButton.BackgroundColor3 = Color3.fromRGB(80, 160, 80) -- Hijau
+ClickTPButton.Text = "CLICK TP (Ctrl)"
+ClickTPButton.Font = Enum.Font.Gotham
+ClickTPButton.TextSize = 11
+ClickTPButton.TextColor3 = Color3.new(1, 1, 1)
+ClickTPButton.ZIndex = 2
+ClickTPButton.AutoButtonColor = true
+Instance.new("UICorner", ClickTPButton)
+
+-- Anti-AFK Button (Warna UNGU)
+local AntiAFKButton = Instance.new("TextButton", Content)
+AntiAFKButton.Position = UDim2.new(0.5, 0, 0, 135)
+AntiAFKButton.Size = UDim2.new(0.45, 0, 0, 30)
+AntiAFKButton.BackgroundColor3 = Color3.fromRGB(160, 80, 160) -- Ungu
+AntiAFKButton.Text = "ANTI-AFK"
+AntiAFKButton.Font = Enum.Font.Gotham
+AntiAFKButton.TextSize = 11
+AntiAFKButton.TextColor3 = Color3.new(1, 1, 1)
+AntiAFKButton.ZIndex = 2
+AntiAFKButton.AutoButtonColor = true
+Instance.new("UICorner", AntiAFKButton)
+
+-- Result Display (Feedback text)
+local ResultText = Instance.new("TextLabel", Content)
+ResultText.Position = UDim2.new(0, 15, 0, 175)
+ResultText.Size = UDim2.new(1, -30, 0, 50)
+ResultText.BackgroundTransparency = 1
+ResultText.TextWrapped = true
+ResultText.Font = Enum.Font.Code
+ResultText.TextSize = 10
+ResultText.TextColor3 = Color3.fromRGB(150, 200, 150)
+ResultText.Text = "Ready - Click TP: Hold Ctrl + Click\nAnti-AFK: Prevents AFK kick"
+ResultText.ZIndex = 2
 
 -- GX Logo (Minimized State) - SEPENUHNYA TERPISAH dari Frame
 local GXLogo = Instance.new("TextButton")
@@ -133,15 +178,14 @@ GXLogo.Name = "GXLogo"
 GXLogo.Parent = ScreenGui
 Instance.new("UICorner", GXLogo).CornerRadius = UDim.new(0, 10)
 
--- GX Logo Decoration
+-- GX Logo Decoration (FIXED: Create them AFTER logo parent is set)
 local GXDecoration1 = Instance.new("Frame")
 GXDecoration1.Size = UDim2.new(0, 4, 0.6, 0)
 GXDecoration1.Position = UDim2.new(0.3, 0, 0.2, 0)
 GXDecoration1.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 GXDecoration1.BorderSizePixel = 0
 GXDecoration1.ZIndex = 101
-GXDecoration1.Parent = GXLogo
-Instance.new("UICorner", GXDecoration1)
+GXDecoration1.Name = "GXDecoration1"
 
 local GXDecoration2 = Instance.new("Frame")
 GXDecoration2.Size = UDim2.new(0, 4, 0.6, 0)
@@ -149,8 +193,7 @@ GXDecoration2.Position = UDim2.new(0.7, 0, 0.2, 0)
 GXDecoration2.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
 GXDecoration2.BorderSizePixel = 0
 GXDecoration2.ZIndex = 101
-GXDecoration2.Parent = GXLogo
-Instance.new("UICorner", GXDecoration2)
+GXDecoration2.Name = "GXDecoration2"
 -- ==========================================
 
 -- ================= SIMPLE DRAG SYSTEM ==============
@@ -258,6 +301,8 @@ local function startEvent()
 
     EventActive = true
     EventEndTime = os.time() + EVENT_DURATION
+    
+    ResultText.Text = "EVENT STARTED!\nTeleported to event location\nDuration: 29:55"
 end
 
 local function endEvent()
@@ -267,16 +312,43 @@ local function endEvent()
     end
     EventActive = false
     EventEndTime = nil
+    
+    ResultText.Text = "EVENT ENDED!\nReturned to original position"
+end
+
+local function resetLogo()
+    -- Reset logo ke state awal
+    GXLogo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    GXLogo.BackgroundTransparency = 0
+    GXLogo.Text = "GX"
+    
+    -- Re-attach decorations jika hilang
+    if not GXLogo:FindFirstChild("GXDecoration1") then
+        GXDecoration1.Parent = GXLogo
+        Instance.new("UICorner", GXDecoration1)
+    end
+    
+    if not GXLogo:FindFirstChild("GXDecoration2") then
+        GXDecoration2.Parent = GXLogo
+        Instance.new("UICorner", GXDecoration2)
+    end
+    
+    -- Reset size dan visibility
+    GXLogo.Size = UDim2.new(0, 60, 0, 60)
+    GXLogo.Visible = false
 end
 
 local function minimizeUI()
     if UIMinimized then return end
     
+    -- Reset logo terlebih dahulu
+    resetLogo()
+    
     -- Simpan posisi frame
     LastLogoPosition = Frame.Position
     
-    -- Animasi minimize
-    local tween = TweenService:Create(
+    -- Animasi minimize frame
+    local frameTween = TweenService:Create(
         Frame,
         TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {
@@ -285,9 +357,9 @@ local function minimizeUI()
         }
     )
     
-    tween:Play()
+    frameTween:Play()
     
-    -- Tunggu animasi selesai lalu sembunyikan
+    -- Tunggu animasi selesai lalu sembunyikan frame
     wait(0.2)
     Frame.Visible = false
     
@@ -295,6 +367,11 @@ local function minimizeUI()
     GXLogo.Position = LastLogoPosition
     GXLogo.Visible = true
     GXLogo.Size = UDim2.new(0, 0, 0, 0)
+    GXLogo.BackgroundTransparency = 0
+    
+    -- Pastikan decorations ada
+    GXDecoration1.Parent = GXLogo
+    GXDecoration2.Parent = GXLogo
     
     -- Animasi logo muncul
     local logoAnim = TweenService:Create(
@@ -308,6 +385,8 @@ local function minimizeUI()
     logoAnim:Play()
     UIMinimized = true
     MinimizeButton.Text = "+"
+    
+    ResultText.Text = "Minimized to GX logo\nClick logo to restore"
 end
 
 local function maximizeUI()
@@ -332,6 +411,10 @@ local function maximizeUI()
     wait(0.2)
     GXLogo.Visible = false
     
+    -- Reset logo state
+    GXLogo.Size = UDim2.new(0, 60, 0, 60)
+    GXLogo.BackgroundTransparency = 0
+    
     -- Tampilkan frame di posisi logo
     Frame.Position = LastLogoPosition
     Frame.Visible = true
@@ -343,13 +426,15 @@ local function maximizeUI()
         Frame,
         TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {
-            Size = UDim2.new(0, 280, 0, 180)
+            Size = UDim2.new(0, 320, 0, 250)
         }
     )
     
     frameAnim:Play()
     UIMinimized = false
     MinimizeButton.Text = "-"
+    
+    ResultText.Text = "GANDAX " .. GANDAX_VERSION .. " Restored\nAll features available"
 end
 
 local function toggleMinimize()
@@ -377,23 +462,81 @@ local function updateStatus()
         else
             local m = math.floor(remain / 60)
             local s = math.floor(remain % 60)
-            Status.Text = "Status: EVENT ACTIVE\nEnds in: " .. string.format("%02d:%02d", m, s)
+            Status.Text = "Status: EVENT ACTIVE\nEnds in: " .. string.format("%02d:%02d", m, s) .. "\nNext Event: --:--:--"
         end
     else
         Status.Text = "GANDAX " .. GANDAX_VERSION .. "\nDuration: 29:55\nStatus: " .. (AutoEventEnabled and "Active" or "Idle") .. "\nNext Event: " .. getNextEventCountdown()
     end
 end
--- ==========================================
+
+-- ================= CLICK TELEPORT SYSTEM ==================
+local Mouse = LocalPlayer:GetMouse()
+
+ClickTPButton.MouseButton1Click:Connect(function()
+    ClickTPEnabled = not ClickTPEnabled
+    
+    if ClickTPEnabled then
+        ClickTPButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100) -- Hijau terang saat ON
+        ClickTPButton.Text = "CLICK TP: ON (Ctrl)"
+        ResultText.Text = "Click TP ACTIVE\nHold Ctrl + Click to teleport"
+    else
+        ClickTPButton.BackgroundColor3 = Color3.fromRGB(80, 160, 80) -- Hijau normal saat OFF
+        ClickTPButton.Text = "CLICK TP (Ctrl)"
+        ResultText.Text = "Click TP INACTIVE"
+    end
+end)
+
+Mouse.Button1Down:Connect(function()
+    if ClickTPEnabled and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and Mouse.Target then
+            local targetPos = Mouse.Hit.p
+            char.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+            ResultText.Text = string.format("Teleported to:\nX: %d, Y: %d, Z: %d", 
+                math.floor(targetPos.X), math.floor(targetPos.Y), math.floor(targetPos.Z))
+        end
+    end
+end)
+
+-- ================= ANTI-AFK SYSTEM ==================
+AntiAFKButton.MouseButton1Click:Connect(function()
+    AntiAFKEnabled = not AntiAFKEnabled
+    
+    if AntiAFKEnabled then
+        AntiAFKButton.BackgroundColor3 = Color3.fromRGB(180, 100, 180) -- Ungu terang saat ON
+        AntiAFKButton.Text = "ANTI-AFK: ON"
+        ResultText.Text = "Anti-AFK ACTIVE\nWill prevent AFK kick"
+        
+        -- Start anti-AFK loop
+        task.spawn(function()
+            while AntiAFKEnabled do
+                wait(30)
+                if AntiAFKEnabled then
+                    pcall(function()
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton2(Vector2.new(0, 0))
+                    end)
+                end
+            end
+        end)
+    else
+        AntiAFKButton.BackgroundColor3 = Color3.fromRGB(160, 80, 160) -- Ungu normal saat OFF
+        AntiAFKButton.Text = "ANTI-AFK"
+        ResultText.Text = "Anti-AFK INACTIVE"
+    end
+end)
 
 -- ================= EVENTS =================
 Toggle.MouseButton1Click:Connect(function()
     AutoEventEnabled = not AutoEventEnabled
     if AutoEventEnabled then
         Toggle.Text = "AUTO EVENT : ON"
-        Toggle.BackgroundColor3 = Color3.fromRGB(40, 120, 40)
+        Toggle.BackgroundColor3 = Color3.fromRGB(60, 180, 60) -- Hijau saat ON
+        ResultText.Text = "Auto Event ENABLED\nWill auto teleport every 2 hours"
     else
         Toggle.Text = "AUTO EVENT : OFF"
-        Toggle.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+        Toggle.BackgroundColor3 = Color3.fromRGB(180, 60, 60) -- Merah saat OFF
+        ResultText.Text = "Auto Event DISABLED"
         if EventActive then
             endEvent()
         end
@@ -412,7 +555,7 @@ GXLogo.MouseButton1Click:Connect(function()
     end
 end)
 
--- Hover effects
+-- Hover effects untuk semua buttons
 MinimizeButton.MouseEnter:Connect(function()
     MinimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 end)
@@ -422,11 +565,27 @@ MinimizeButton.MouseLeave:Connect(function()
 end)
 
 Toggle.MouseEnter:Connect(function()
-    Toggle.BackgroundColor3 = AutoEventEnabled and Color3.fromRGB(50, 140, 50) or Color3.fromRGB(140, 50, 50)
+    Toggle.BackgroundColor3 = AutoEventEnabled and Color3.fromRGB(80, 200, 80) or Color3.fromRGB(200, 80, 80)
 end)
 
 Toggle.MouseLeave:Connect(function()
-    Toggle.BackgroundColor3 = AutoEventEnabled and Color3.fromRGB(40, 120, 40) or Color3.fromRGB(120, 40, 40)
+    Toggle.BackgroundColor3 = AutoEventEnabled and Color3.fromRGB(60, 180, 60) or Color3.fromRGB(180, 60, 60)
+end)
+
+ClickTPButton.MouseEnter:Connect(function()
+    ClickTPButton.BackgroundColor3 = ClickTPEnabled and Color3.fromRGB(120, 220, 120) or Color3.fromRGB(100, 180, 100)
+end)
+
+ClickTPButton.MouseLeave:Connect(function()
+    ClickTPButton.BackgroundColor3 = ClickTPEnabled and Color3.fromRGB(100, 200, 100) or Color3.fromRGB(80, 160, 80)
+end)
+
+AntiAFKButton.MouseEnter:Connect(function()
+    AntiAFKButton.BackgroundColor3 = AntiAFKEnabled and Color3.fromRGB(200, 120, 200) or Color3.fromRGB(180, 100, 180)
+end)
+
+AntiAFKButton.MouseLeave:Connect(function()
+    AntiAFKButton.BackgroundColor3 = AntiAFKEnabled and Color3.fromRGB(180, 100, 180) or Color3.fromRGB(160, 80, 160)
 end)
 
 GXLogo.MouseEnter:Connect(function()
@@ -458,8 +617,28 @@ RunService.Heartbeat:Connect(function()
 end)
 -- ==========================================
 
+-- Inisialisasi: Attach decorations ke logo
+GXDecoration1.Parent = GXLogo
+GXDecoration2.Parent = GXLogo
+Instance.new("UICorner", GXDecoration1)
+Instance.new("UICorner", GXDecoration2)
+
 -- Initial update
 updateStatus()
 
-print("[GANDAX " .. GANDAX_VERSION .. "] Script loaded successfully!")
-print("[GANDAX] Simple drag system activated")
+print("========================================")
+print("GANDAX AUTO EVENT " .. GANDAX_VERSION)
+print("========================================")
+print("FIXES:")
+print("1. ✓ Fixed logo background disappearing on multiple minimize/maximize")
+print("2. ✓ Logo decorations properly reattached each time")
+print("3. ✓ Background transparency reset on each minimize")
+print("")
+print("FEATURES ADDED:")
+print("1. ✓ Anti-AFK System (Prevents AFK kick)")
+print("2. ✓ Click Teleport (Hold Ctrl + Click)")
+print("3. ✓ Color-coded buttons (Red/Green/Purple)")
+print("4. ✓ Status Display with feedback")
+print("5. ✓ Auto Event every 2 hours")
+print("6. ✓ Minimize with GX logo")
+print("========================================")
