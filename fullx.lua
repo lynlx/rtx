@@ -1,6 +1,7 @@
 --[[ 
     GANDAX 2.4.2 - Minimize Fix & UI Improvements
     Fixed: Minimize bug, improved logo design
+    Added: Cinematic 1 & 2 effects
 --]]
 
 local Players = game:GetService("Players")
@@ -28,10 +29,10 @@ ScreenGui.Name = "GANDAX_2_4_2"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
--- Main Frame
+-- Main Frame (diperbesar untuk menampung tombol baru)
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 350, 0, 420)
-Frame.Position = UDim2.new(0, 20, 0.5, -210)
+Frame.Size = UDim2.new(0, 350, 0, 480) -- Diperbesar dari 420 ke 480
+Frame.Position = UDim2.new(0, 20, 0.5, -240) -- Disesuaikan untuk tinggi baru
 Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Frame.BorderSizePixel = 0
 local FrameCorner = Instance.new("UICorner", Frame)
@@ -136,7 +137,7 @@ Status.TextYAlignment = Enum.TextYAlignment.Top
 Status.Font = Enum.Font.Code
 Status.TextSize = 11
 Status.TextColor3 = Color3.fromRGB(200, 200, 200)
-Status.Text = "GANDAX 2.4.2 - Minimize Bug Fixed\nLogo design improved"
+Status.Text = "GANDAX 2.4.2 - Minimize Bug Fixed\nLogo design improved + Cinematic Effects"
 
 -- ================= TIME CONTROL ==================
 local TimeLabel = Instance.new("TextLabel", Content)
@@ -249,9 +250,40 @@ RemoveParticlesButton.TextSize = 11
 RemoveParticlesButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", RemoveParticlesButton)
 
+-- ================= CINEMATIC EFFECTS ==================
+local CinematicLabel = Instance.new("TextLabel", Content)
+CinematicLabel.Position = UDim2.new(0, 15, 0, 305) -- Disesuaikan
+CinematicLabel.Size = UDim2.new(1, -30, 0, 20)
+CinematicLabel.BackgroundTransparency = 1
+CinematicLabel.Text = "CINEMATIC EFFECTS"
+CinematicLabel.Font = Enum.Font.GothamBold
+CinematicLabel.TextSize = 12
+CinematicLabel.TextColor3 = Color3.fromRGB(200, 255, 150)
+CinematicLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local Cinematic1Button = Instance.new("TextButton", Content)
+Cinematic1Button.Position = UDim2.new(0.05, 0, 0, 330) -- Disesuaikan
+Cinematic1Button.Size = UDim2.new(0.45, 0, 0, 30)
+Cinematic1Button.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
+Cinematic1Button.Text = "CINEMATIC 1"
+Cinematic1Button.Font = Enum.Font.Gotham
+Cinematic1Button.TextSize = 11
+Cinematic1Button.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", Cinematic1Button)
+
+local Cinematic2Button = Instance.new("TextButton", Content)
+Cinematic2Button.Position = UDim2.new(0.5, 0, 0, 330) -- Disesuaikan
+Cinematic2Button.Size = UDim2.new(0.45, 0, 0, 30)
+Cinematic2Button.BackgroundColor3 = Color3.fromRGB(220, 160, 80)
+Cinematic2Button.Text = "CINEMATIC 2"
+Cinematic2Button.Font = Enum.Font.Gotham
+Cinematic2Button.TextSize = 11
+Cinematic2Button.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", Cinematic2Button)
+
 -- ================= UTILITIES ==================
 local ClickTPButton = Instance.new("TextButton", Content)
-ClickTPButton.Position = UDim2.new(0.05, 0, 0, 310)
+ClickTPButton.Position = UDim2.new(0.05, 0, 0, 370) -- Disesuaikan
 ClickTPButton.Size = UDim2.new(0.45, 0, 0, 30)
 ClickTPButton.BackgroundColor3 = Color3.fromRGB(80, 160, 80)
 ClickTPButton.Text = "CLICK TP (Ctrl)"
@@ -261,7 +293,7 @@ ClickTPButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", ClickTPButton)
 
 local AntiAFKButton = Instance.new("TextButton", Content)
-AntiAFKButton.Position = UDim2.new(0.5, 0, 0, 310)
+AntiAFKButton.Position = UDim2.new(0.5, 0, 0, 370) -- Disesuaikan
 AntiAFKButton.Size = UDim2.new(0.45, 0, 0, 30)
 AntiAFKButton.BackgroundColor3 = Color3.fromRGB(180, 80, 180)
 AntiAFKButton.Text = "ANTI-AFK"
@@ -272,14 +304,14 @@ Instance.new("UICorner", AntiAFKButton)
 
 -- Result Display
 local ResultText = Instance.new("TextLabel", Content)
-ResultText.Position = UDim2.new(0, 15, 0, 350)
+ResultText.Position = UDim2.new(0, 15, 0, 410) -- Disesuaikan
 ResultText.Size = UDim2.new(1, -30, 0, 50)
 ResultText.BackgroundTransparency = 1
 ResultText.TextWrapped = true
 ResultText.Font = Enum.Font.Code
 ResultText.TextSize = 10
 ResultText.TextColor3 = Color3.fromRGB(150, 200, 150)
-ResultText.Text = "GANDAX 2.4.2 Ready\nMinimize system fixed"
+ResultText.Text = "GANDAX 2.4.2 Ready\nMinimize system fixed + Cinematic Effects added"
 -- ==========================================
 
 -- ================= FIXED MINIMIZE SYSTEM ==================
@@ -339,6 +371,132 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         logoDragging = false
     end
+end)
+
+-- ================= CINEMATIC EFFECTS FUNCTIONS ==================
+
+-- Cinematic 1 Effect
+Cinematic1Button.MouseButton1Click:Connect(function()
+    pcall(function()
+        local function makecoollightningYOOOOOOOOOOOOOOOOOOOOOOOOOOOOO()
+            local ass = Instance.new("Clouds", workspace.Terrain)
+            ass.Cover = 0.662
+            ass.Density = 0.7
+            ass.Color = Color3.fromRGB(8,8,8)
+            game.Lighting.Ambient = Color3.new()
+            game.Lighting.ColorShift_Bottom = Color3.new()
+            game.Lighting.ColorShift_Top = Color3.new()
+            game.Lighting.OutdoorAmbient = Color3.fromRGB(77,77,77)
+            game.Lighting.LightingStyle = "Realistic"
+            game.Lighting.ClockTime = 6.2
+            game.Lighting.GeographicLatitude = 272
+            game.Lighting.FogEnd = 1e8
+            game.Lighting.ColorCorrection.Enabled = false
+        end
+        makecoollightningYOOOOOOOOOOOOOOOOOOOOOOOOOOOOO()
+        
+        ResultText.Text = "Cinematic 1 Applied\nDark Clouds & Moody Lighting Activated"
+    end)
+end)
+
+-- Cinematic 2 Effect
+Cinematic2Button.MouseButton1Click:Connect(function()
+    pcall(function()
+        local light = game.Lighting
+        for i, v in pairs(light:GetChildren()) do
+            v:Destroy()
+        end
+
+        local ter = workspace.Terrain
+        local color = Instance.new("ColorCorrectionEffect")
+        local bloom = Instance.new("BloomEffect")
+        local sun = Instance.new("SunRaysEffect")
+        local blur = Instance.new("BlurEffect")
+
+        color.Parent = light
+        bloom.Parent = light
+        sun.Parent = light
+        blur.Parent = light
+
+        -- enable or disable shit
+
+        local config = {
+
+            Terrain = true;
+            ColorCorrection = true;
+            Sun = true;
+            Lighting = true;
+            BloomEffect = true;
+            
+        }
+
+        -- settings {
+
+        color.Enabled = false
+        color.Contrast = 0.15
+        color.Brightness = 0.1
+        color.Saturation = 0.25
+        color.TintColor = Color3.fromRGB(255, 222, 211)
+
+        bloom.Enabled = false
+        bloom.Intensity = 0.1
+
+        sun.Enabled = false
+        sun.Intensity = 0.2
+        sun.Spread = 1
+
+        bloom.Enabled = false
+        bloom.Intensity = 0.05
+        bloom.Size = 32
+        bloom.Threshold = 1
+
+        blur.Enabled = false
+        blur.Size = 6
+
+        -- settings }
+
+
+        if config.ColorCorrection then
+            color.Enabled = true
+        end
+
+
+        if config.Sun then
+            sun.Enabled = true
+        end
+
+
+        if config.Terrain then
+            -- settings {
+            ter.WaterColor = Color3.fromRGB(10, 10, 24)
+            ter.WaterWaveSize = 0.15
+            ter.WaterWaveSpeed = 22
+            ter.WaterTransparency = 1
+            ter.WaterReflectance = 0.05
+            -- settings }
+        end
+
+
+        if config.Lighting then
+            -- settings {
+            light.Ambient = Color3.fromRGB(0, 0, 0)
+            light.Brightness = 4
+            light.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+            light.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+            light.ExposureCompensation = 0
+            light.FogColor = Color3.fromRGB(132, 132, 132)
+            light.GlobalShadows = true
+            light.OutdoorAmbient = Color3.fromRGB(112, 117, 128)
+            light.Outlines = false
+            -- settings }
+        end
+
+
+
+        game:GetService("MaterialService")["Use2022Materials"] = true
+        
+        ResultText.Text = "Cinematic 2 Applied\nAdvanced Lighting & Terrain Effects"
+    end)
 end)
 
 -- ================= REST OF THE FUNCTIONALITY ==================
@@ -609,5 +767,6 @@ print("FIXED ISSUES:")
 print("1. ✓ Minimize system completely fixed")
 print("2. ✓ Logo GX now has better design with effects")
 print("3. ✓ Logo click properly restores UI")
-print("4. ✓ All other features remain functional")
+print("4. ✓ Added Cinematic 1 & 2 effects")
+print("5. ✓ All other features remain functional")
 print("========================================")
